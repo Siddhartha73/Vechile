@@ -1,6 +1,10 @@
 from flask import Flask, request, jsonify
 import socket
 import threading
+import os
+
+PORT = int(os.environ.get("PORT", 5000))
+app.run(host="0.0.0.0", port=PORT)
 
 app = Flask(__name__)
 
