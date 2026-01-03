@@ -38,6 +38,12 @@ def send_command():
         return jsonify({"status": "Command sent"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+@app.route("/vehicle", methods=["POST"])
+def vehicle_receive():
+    data = request.data.decode()
+    print("From vehicle:", data)
+    return "OK", 200
 
 @app.route("/")
 def home():
