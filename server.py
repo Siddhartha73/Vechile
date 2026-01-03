@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-# In-memory command store (per vehicle)
+# In-memory storage
 vehicle_commands = {}
 vehicle_status = {}
 
@@ -10,7 +10,7 @@ vehicle_status = {}
 def home():
     return "Vehicle Control Server Running"
 
-# ---------- APP → SERVER ----------
+# -------- APP → SERVER --------
 @app.route("/send", methods=["POST"])
 def send_command():
     data = request.json
@@ -25,22 +25,22 @@ def send_command():
     print("From App:", cmd)
     return jsonify({"status": "Queued"}), 200
 
-# ---------- VEHICLE → SERVER ----------
+# -------- VEHICLE → SERVER --------
 @app.route("/poll", methods=["GET"])
 def poll_command():
     dev = request.args.get("dev")
 
     if not dev:
-        return "", 400
+        return "NO_DEV", 400
 
     if dev in vehicle_commands:
         cmd = vehicle_commands.pop(dev)
         print("Sent to vehicle:", cmd)
         return cmd, 200
 
-    return "", 204  # No command
+    return "NO_CMD", 204
 
-# ---------- VEHICLE → SERVER ----------
+# -------- VEHICLE → SERVER (STATUS) --------
 @app.route("/status", methods=["POST"])
 def receive_status():
     data = request.data.decode()
@@ -50,6 +50,12 @@ def receive_status():
     print("From vehicle:", dev, data)
 
     return "OK", 200
+
+# -------- APP → SERVER (READ STATUS) --------
+@app.route("/status", methods=["GET"])
+def get_status():
+    return jsonify(vehicle_status), 200
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8080)
