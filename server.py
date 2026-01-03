@@ -3,7 +3,8 @@ import os
 
 app = Flask(__name__)
 
-latest_command = None
+
+est_command = None
 
 @app.route("/")
 def home():
