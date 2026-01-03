@@ -1,14 +1,10 @@
 from flask import Flask, request, jsonify
-import os
 
 app = Flask(__name__)
 
-latest_command = None
-latest_status = {
-    "speed": 0,
-    "brake": 0,
-    "state": "RUNNING"
-}
+# In-memory command store (per vehicle)
+vehicle_commands = {}
+vehicle_status = {}
 
 @app.route("/")
 def home():
@@ -17,36 +13,43 @@ def home():
 # ---------- APP → SERVER ----------
 @app.route("/send", methods=["POST"])
 def send_command():
-    global latest_command
     data = request.json
-    latest_command = data.get("command")
-    print("From App:", latest_command)
-    return jsonify({"status": "stored"}), 200
+    cmd = data.get("command")
 
-# ---------- VEHICLE ← SERVER ----------
+    if not cmd or "DEV=" not in cmd:
+        return jsonify({"error": "Invalid command"}), 400
+
+    dev = cmd.split("DEV=")[1].split("|")[0]
+    vehicle_commands[dev] = cmd
+
+    print("From App:", cmd)
+    return jsonify({"status": "Queued"}), 200
+
+# ---------- VEHICLE → SERVER ----------
 @app.route("/poll", methods=["GET"])
 def poll_command():
-    global latest_command
-    if latest_command:
-        cmd = latest_command
-        latest_command = None
+    dev = request.args.get("dev")
+
+    if not dev:
+        return "", 400
+
+    if dev in vehicle_commands:
+        cmd = vehicle_commands.pop(dev)
         print("Sent to vehicle:", cmd)
         return cmd, 200
-    return "NO_CMD", 204
+
+    return "", 204  # No command
 
 # ---------- VEHICLE → SERVER ----------
 @app.route("/status", methods=["POST"])
 def receive_status():
-    global latest_status
-    latest_status = request.json
-    print("Vehicle Status:", latest_status)
+    data = request.data.decode()
+    dev = request.args.get("dev", "UNKNOWN")
+
+    vehicle_status[dev] = data
+    print("From vehicle:", dev, data)
+
     return "OK", 200
 
-# ---------- APP ← SERVER ----------
-@app.route("/status", methods=["GET"])
-def get_status():
-    return jsonify(latest_status), 200
-
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=8080)
