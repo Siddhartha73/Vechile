@@ -14,7 +14,7 @@ latest_status = {
 def home():
     return "Vehicle Control Server Running"
 
-# App → Server
+# ---------- APP → SERVER ----------
 @app.route("/send", methods=["POST"])
 def send_command():
     global latest_command
@@ -23,7 +23,7 @@ def send_command():
     print("From App:", latest_command)
     return jsonify({"status": "stored"}), 200
 
-# ESP32 → Poll
+# ---------- VEHICLE ← SERVER ----------
 @app.route("/poll", methods=["GET"])
 def poll_command():
     global latest_command
@@ -34,18 +34,19 @@ def poll_command():
         return cmd, 200
     return "NO_CMD", 204
 
-# ESP32 → Status
+# ---------- VEHICLE → SERVER ----------
 @app.route("/status", methods=["POST"])
 def receive_status():
     global latest_status
     latest_status = request.json
-    return jsonify({"ok": True})
+    print("Vehicle Status:", latest_status)
+    return "OK", 200
 
-# App → Status
+# ---------- APP ← SERVER ----------
 @app.route("/status", methods=["GET"])
-def send_status():
-    return jsonify(latest_status)
+def get_status():
+    return jsonify(latest_status), 200
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8080))
+    port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
