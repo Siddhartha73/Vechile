@@ -1,53 +1,38 @@
 from flask import Flask, request, jsonify
-import socket
-import threading
 import os
-
-PORT = int(os.environ.get("PORT", 5000))
-app.run(host="0.0.0.0", port=PORT)
 
 app = Flask(__name__)
 
-vehicle_socket = None
-
-def tcp_listener():
-    global vehicle_socket
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind(("0.0.0.0", 9000))
-    s.listen(1)
-    print("Waiting for vehicle on TCP 9000...")
-    vehicle_socket, addr = s.accept()
-    print("Vehicle connected from:", addr)
-
-threading.Thread(target=tcp_listener, daemon=True).start()
-
-@app.route("/send", methods=["POST"])
-def send_command():
-    global vehicle_socket
-    data = request.json
-    cmd = data.get("command")
-
-    if not cmd:
-        return jsonify({"error": "No command"}), 400
-
-    if vehicle_socket is None:
-        return jsonify({"error": "Vehicle not connected"}), 503
-
-    try:
-        vehicle_socket.sendall((cmd + "\n").encode())
-        return jsonify({"status": "Command sent"}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-    
-@app.route("/vehicle", methods=["POST"])
-def vehicle_receive():
-    data = request.data.decode()
-    print("From vehicle:", data)
-    return "OK", 200
-
+# ================= HOME =================
 @app.route("/")
 def home():
     return "Vehicle Control Server Running"
 
+# ================= MOBILE APP ENDPOINT =================
+@app.route("/send", methods=["POST"])
+def send_command():
+    data = request.json
+    command = data.get("command")
+
+    if not command:
+        return jsonify({"error": "No command"}), 400
+
+    print("From App:", command)
+
+    # In HTTP architecture, app just stores / logs / validates
+    # Vehicle will fetch commands separately (or same endpoint logic)
+    return jsonify({"status": "Command received"}), 200
+
+# ================= VEHICLE (A7670C) ENDPOINT =================
+@app.route("/vehicle", methods=["POST"])
+def vehicle_receive():
+    data = request.data.decode()
+    print("From Vehicle:", data)
+
+    # Here you can parse CMD, authenticate, store state, etc.
+    return "OK", 200
+
+# ================= MAIN =================
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
